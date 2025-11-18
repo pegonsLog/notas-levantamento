@@ -1,27 +1,92 @@
-# NotasLevantamento
+# 📊 Notas Levantamento
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.19.
+Sistema de importação e análise de dados Excel para Firebase Firestore com formatação brasileira completa.
 
-## Development server
+## ✨ Características
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- ✅ Importação de arquivos Excel (.xlsx, .xls, .csv)
+- ✅ Formatação brasileira (R$, dd/mm/yyyy, vírgula decimal)
+- ✅ Prévia de dados antes da importação
+- ✅ Upload em lote para Firestore
+- ✅ Interface moderna e responsiva
+- ✅ Fonte Montserrat
+- ✅ Proteção de credenciais (gitignored)
 
-## Code scaffolding
+## 🚀 Início Rápido
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+### 1. Instalar dependências
+```bash
+npm install
+```
 
-## Build
+### 2. Configurar Firebase
+Edite os arquivos em `src/environments/`:
+- `environment.ts` (desenvolvimento)
+- `environment.prod.ts` (produção)
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+Use `environment.example.ts` como referência.
 
-## Running unit tests
+### 3. Executar
+```bash
+npm start
+```
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+Acesse: `http://localhost:4200`
 
-## Running end-to-end tests
+## 📖 Documentação Completa
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Consulte o arquivo **[INSTRUCOES.md](./INSTRUCOES.md)** para documentação detalhada incluindo:
+- Configuração do Firebase
+- Como usar o sistema
+- Personalização de colunas
+- Serviços disponíveis
+- Formatações brasileiras
+- Solução de problemas
 
-## Further help
+## 📁 Estrutura Principal
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```
+src/
+├── app/
+│   ├── components/excel-import/    # Componente de importação
+│   └── services/                   # Serviços (Excel, Firestore, Format)
+├── environments/                   # Configurações Firebase
+└── styles.scss                     # Estilos globais
+```
+
+## 🎯 Exemplo de Uso
+
+1. Selecione um arquivo Excel
+2. Visualize a prévia dos dados
+3. Clique em "Importar para Firestore"
+4. Dados são salvos na coleção `notas-levantamento`
+
+Arquivo de exemplo: `exemplo-dados.csv`
+
+## 🔒 Segurança
+
+- Arquivos de ambiente estão no `.gitignore`
+- **NUNCA** faça commit de credenciais
+- Use variáveis de ambiente em produção
+
+## 🛠️ Tecnologias
+
+- Angular 18
+- Firebase/Firestore
+- XLSX (importação de Excel)
+- ECharts / ngx-echarts (gráficos)
+- Heroicons (ícones SVG)
+- TypeScript
+- SCSS
+
+## 📝 Comandos Úteis
+
+```bash
+npm start          # Servidor de desenvolvimento
+npm run build      # Build de produção
+npm test           # Testes unitários
+```
+
+---
+
+Desenvolvido com Angular CLI 18.2.19
