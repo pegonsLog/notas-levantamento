@@ -1,0 +1,142 @@
+<div class="container">
+  <div class="header">
+    <h1>Análise por Empresa e Ano</h1>
+    <p class="subtitle">Tabela de valores brutos agrupados por empresa e ano</p>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-card">
+    <h2>Filtros</h2>
+    
+    <!-- Filtro de Período -->
+    <div class="filter-section">
+      <h3>Período</h3>
+      <div class="date-filters">
+        <div class="form-group">
+          <label for="startDate">Mês/Ano Inicial</label>
+          <input 
+            type="text" 
+            id="startDate" 
+            [(ngModel)]="startDate"
+            placeholder="mm/aaaa (ex: 11/2024)"
+            class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="endDate">Mês/Ano Final</label>
+          <input 
+            type="text" 
+            id="endDate" 
+            [(ngModel)]="endDate"
+            placeholder="mm/aaaa (ex: 11/2024)"
+            class="form-control">
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtro de Empresas -->
+    <div class="filter-section">
+      <h3>Empresas</h3>
+      <div class="companies-filter">
+        <div class="select-all-wrapper">
+          <label class="checkbox-label">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="selectAll"
+              (change)="toggleSelectAll()">
+            <span class="checkbox-text">Selecionar Todas</span>
+          </label>
+        </div>
+        
+        <div class="companies-list">
+          <label 
+            *ngFor="let company of allCompanies" 
+            class="checkbox-label">
+            <input 
+              type="checkbox" 
+              [checked]="isCompanySelected(company)"
+              (change)="toggleCompany(company)">
+            <span class="checkbox-text">{{ company }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="action-buttons">
+      <button 
+        class="btn btn-primary" 
+        (click)="generateTable()"
+        [disabled]="isLoading">
+        <span *ngIf="!isLoading">Gerar Tabela</span>
+        <span *ngIf="isLoading">Carregando...</span>
+      </button>
+      <button 
+        class="btn btn-secondary" 
+        (click)="clearFilters()"
+        [disabled]="isLoading">
+        Limpar Filtros
+      </button>
+    </div>
+  </div>
+
+  <!-- Mensagem de Sem Dados -->
+  <div *ngIf="showNoDataMessage" class="no-data-message">
+    <p>Nenhum dado encontrado para o período e empresas selecionadas.</p>
+  </div>
+
+  <!-- Tabela de Resultados -->
+  <div *ngIf="showResults" class="results-section">
+    <div class="results-header">
+      <h2>Resultados</h2>
+      <div class="summary">
+        <span class="summary-item">
+          <strong>Empresas:</strong> {{ tableData.length }}
+        </span>
+        <span class="summary-item">
+          <strong>Total Geral:</strong> {{ formatCurrency(grandTotal) }}
+        </span>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="company-column">Empresa</th>
+            <th *ngFor="let yearCol of yearColumns" class="year-column">
+              {{ yearCol.year }}
+            </th>
+            <th class="total-column">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of tableData" class="data-row">
+            <td class="company-cell">{{ row.company }}</td>
+            <td *ngFor="let year of years" class="value-cell">
+              <span *ngIf="getCellValue(row, year) > 0">
+                {{ formatCurrency(getCellValue(row, year)) }}
+              </span>
+              <span *ngIf="getCellValue(row, year) === 0" class="empty-cell">
+                -
+              </span>
+            </td>
+            <td class="total-cell">
+              {{ formatCurrency(row.total) }}
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="totals-row">
+            <td class="company-cell"><strong>Total por Ano</strong></td>
+            <td *ngFor="let yearCol of yearColumns" class="value-cell">
+              <strong>{{ formatCurrency(yearCol.total) }}</strong>
+            </td>
+            <td class="total-cell">
+              <strong>{{ formatCurrency(grandTotal) }}</strong>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
