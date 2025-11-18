@@ -385,12 +385,26 @@ export class CompanyYearTableComponent implements OnInit {
   }
 
   /**
-   * Limpa filtros
+   * Limpa filtros de período
    */
-  clearFilters(): void {
+  clearPeriodFilter(): void {
     this.setDefaultDates();
+  }
+
+  /**
+   * Limpa filtros de empresas (checkboxes)
+   */
+  clearCompanyFilter(): void {
     this.selectedCompanies = new Set();
     this.selectAll = false;
+  }
+
+  /**
+   * Limpa todos os filtros
+   */
+  clearFilters(): void {
+    this.clearPeriodFilter();
+    this.clearCompanyFilter();
     this.showResults = false;
     this.tableData = [];
   }
