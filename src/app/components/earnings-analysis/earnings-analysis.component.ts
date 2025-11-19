@@ -206,6 +206,9 @@ export class EarningsAnalysisComponent implements OnInit {
     } else {
       this.filteredCompanies = this.companies.filter(c => c.name === this.selectedCompany);
     }
+    
+    // Mantém ordenação por nome do cliente crescente
+    this.filteredCompanies.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /**
@@ -288,8 +291,8 @@ export class EarningsAnalysisComponent implements OnInit {
       };
     });
 
-    // Ordena por total geral decrescente
-    this.companies.sort((a, b) => b.totalGeral - a.totalGeral);
+    // Ordena por nome do cliente crescente
+    this.companies.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /**

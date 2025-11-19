@@ -328,8 +328,8 @@ export class CompanyYearTableComponent implements OnInit {
       };
     });
 
-    // Ordena por total decrescente
-    this.tableData.sort((a, b) => b.total - a.total);
+    // Ordena por nome da empresa crescente
+    this.tableData.sort((a, b) => a.company.localeCompare(b.company));
     
     // Calcula totais por ano
     this.calculateYearTotals();
