@@ -183,6 +183,15 @@
         <span class="summary-item">
           <strong>Total Geral:</strong> {{ formatCurrency(grandTotal) }}
         </span>
+        <button 
+          class="btn btn-secondary" 
+          (click)="exportToExcel()"
+          [disabled]="tableData.length === 0">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 3.75h15a.75.75 0 01.75.75v3.5a.75.75 0 01-.75.75h-15a.75.75 0 01-.75-.75v-3.5a.75.75 0 01.75-.75zM9 12h6m-3-3v6m-7.5 3h15a.75.75 0 01.75.75v.75a.75.75 0 01-.75.75h-15a.75.75 0 01-.75-.75v-.75a.75.75 0 01.75-.75z" />
+          </svg>
+          Exportar Excel
+        </button>
       </div>
     </div>
 

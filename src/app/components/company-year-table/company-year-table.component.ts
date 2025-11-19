@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FirestoreService } from '../../services/firestore.service';
 import { NomeRazao } from '../../models/nome-razao.interface';
+import * as XLSX from 'xlsx';
 
 interface CompanyYearData {
   company: string;
@@ -423,6 +424,34 @@ export class CompanyYearTableComponent implements OnInit {
     this.grandTotal = this.tableData.reduce((sum, row) => sum + row.total, 0);
   }
 
+  exportToExcel(): void {
+    if (!this.showResults || this.tableData.length === 0) {
+      alert('Gere a tabela antes de exportar para Excel.');
+      return;
+    }
+
+    const header = ['Empresa', ...this.years.map(year => year.toString()), 'Total'];
+    const data: any[][] = [header];
+
+    this.tableData.forEach(row => {
+      const values = this.years.map(year => this.getCellValue(row, year));
+      data.push([row.company, ...values, row.total]);
+    });
+
+    const totalRow = ['Total por Ano', ...this.yearColumns.map(yc => yc.total), this.grandTotal];
+    data.push(totalRow);
+
+    const worksheet: XLSX.WorkSheet = XLSX.utils.aoa_to_sheet(data);
+    const workbook: XLSX.WorkBook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Empresa_Ano');
+
+    const start = this.startDate ? this.startDate.replace('/', '-') : '';
+    const end = this.endDate ? this.endDate.replace('/', '-') : '';
+    const fileName = `tabela_empresa_ano_${start}_a_${end}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
+  }
+
   /**
    * Obtém valor para uma célula específica
    */
@@ -477,4 +506,5 @@ export class CompanyYearTableComponent implements OnInit {
     this.showResults = false;
     this.tableData = [];
   }
+
 }
