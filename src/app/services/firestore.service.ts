@@ -12,7 +12,8 @@ import {
   CollectionReference, 
   DocumentData,
   QuerySnapshot,
-  writeBatch
+  writeBatch,
+  updateDoc
 } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { collectionData } from '@angular/fire/firestore';
@@ -84,6 +85,23 @@ export class FirestoreService {
       return totalAdded;
     } catch (error) {
       console.error('Erro ao adicionar documentos em lote:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Atualiza um documento existente
+   * @param collectionName Nome da coleção
+   * @param documentId ID do documento
+   * @param data Dados para atualização
+   * @returns Promise void
+   */
+  async updateDocument(collectionName: string, documentId: string, data: any): Promise<void> {
+    try {
+      const docRef = doc(this.firestore, collectionName, documentId);
+      await updateDoc(docRef, data);
+    } catch (error) {
+      console.error('Erro ao atualizar documento:', error);
       throw error;
     }
   }

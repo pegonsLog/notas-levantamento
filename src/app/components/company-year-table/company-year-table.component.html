@@ -45,6 +45,42 @@
       </div>
     </div>
 
+    <div class="filter-section">
+      <div class="filter-header">
+        <h3>Pessoa Física / Razão Social</h3>
+      </div>
+      <div class="nome-razao-filter">
+        <div class="form-group">
+          <label for="nomeRazaoSearch">Buscar pessoa física</label>
+          <input 
+            type="text" 
+            id="nomeRazaoSearch" 
+            [(ngModel)]="nomeRazaoSearchTerm"
+            (ngModelChange)="applyNomeRazaoFilter()"
+            placeholder="Digite o nome da pessoa física"
+            class="form-control">
+        </div>
+
+        <div class="nome-razao-list" *ngIf="filteredNomeRazaoList.length > 0">
+          <div class="nome-razao-item" *ngFor="let item of filteredNomeRazaoList">
+            <div class="nome-pessoa">
+              {{ item.nomePessoaFisica }}
+            </div>
+            <div class="nome-razao">
+              {{ item.nomeRazaoSocial }}
+            </div>
+            <div class="nome-status" *ngIf="item.status">
+              {{ item.status }}
+            </div>
+          </div>
+        </div>
+
+        <div class="nome-razao-empty" *ngIf="filteredNomeRazaoList.length === 0 && nomeRazaoSearchTerm">
+          Nenhum resultado encontrado para o termo informado.
+        </div>
+      </div>
+    </div>
+
     <!-- Filtro de Empresas -->
     <div class="filter-section">
       <div class="filter-header">
@@ -70,10 +106,22 @@
             <span class="checkbox-text">Selecionar Todas</span>
           </label>
         </div>
+        <div class="company-search">
+          <div class="form-group">
+            <label for="companySearch">Filtrar empresa</label>
+            <input 
+              type="text" 
+              id="companySearch" 
+              [(ngModel)]="companySearchTerm"
+              (ngModelChange)="applyCompanyFilter()"
+              placeholder="Digite o nome da empresa"
+              class="form-control">
+          </div>
+        </div>
         
         <div class="companies-list">
           <label 
-            *ngFor="let company of allCompanies" 
+            *ngFor="let company of filteredCompanies" 
             class="checkbox-label">
             <input 
               type="checkbox" 
@@ -87,6 +135,15 @@
 
     <!-- Botões de Ação -->
     <div class="action-buttons">
+      <button 
+        class="btn btn-secondary" 
+        (click)="openSelectedCompaniesModal()"
+        [disabled]="isLoading || selectedCompanies.size === 0">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75l8.954-8.955c.44-.439 1.152-.439 1.591 0l8.955 8.955M4.5 10.5v9.75A1.125 1.125 0 005.625 21h12.75A1.125 1.125 0 0019.5 20.25V10.5" />
+        </svg>
+        Mostrar Empresas Escolhidas
+      </button>
       <button 
         class="btn btn-primary" 
         (click)="generateTable()"
@@ -168,6 +225,34 @@
           </tr>
         </tfoot>
       </table>
+    </div>
+  </div>
+  
+  <!-- Modal de Empresas Selecionadas -->
+  <div class="modal-overlay" *ngIf="showSelectedCompaniesModal" (click)="closeSelectedCompaniesModal()">
+    <div class="modal-content modal-small" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Empresas Selecionadas</h3>
+        <button class="btn-close" (click)="closeSelectedCompaniesModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Confira as empresas que serão usadas para gerar a tabela:</p>
+        <ul class="selected-companies-list">
+          <li *ngFor="let company of selectedCompaniesArray">
+            {{ company }}
+          </li>
+        </ul>
+        <p class="selected-companies-count">
+          Total de empresas selecionadas: {{ selectedCompaniesArray.length }}
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeSelectedCompaniesModal()">Fechar</button>
+      </div>
     </div>
   </div>
 </div>

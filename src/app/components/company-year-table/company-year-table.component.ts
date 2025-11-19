@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FirestoreService } from '../../services/firestore.service';
+import { NomeRazao } from '../../models/nome-razao.interface';
 
 interface CompanyYearData {
   company: string;
@@ -46,6 +47,10 @@ export class CompanyYearTableComponent implements OnInit {
   allCompanies: string[] = [];
   selectedCompanies: Set<string> = new Set();
   selectAll: boolean = false;
+  companySearchTerm: string = '';
+  filteredCompanies: string[] = [];
+  selectedCompaniesArray: string[] = [];
+  showSelectedCompaniesModal: boolean = false;
   
   // Mensagem de erro
   showNoDataMessage: boolean = false;
@@ -53,13 +58,29 @@ export class CompanyYearTableComponent implements OnInit {
   // Total geral
   grandTotal: number = 0;
 
+  nomeRazaoCollectionName: string = 'nome-razao';
+  nomeRazaoList: (NomeRazao & { id?: string })[] = [];
+  filteredNomeRazaoList: (NomeRazao & { id?: string })[] = [];
+  nomeRazaoSearchTerm: string = '';
+
   constructor(
     private firestoreService: FirestoreService
   ) { }
 
   ngOnInit(): void {
     this.loadDocuments();
+    this.loadNomeRazaoList();
     this.setDefaultDates();
+  }
+
+  async loadNomeRazaoList(): Promise<void> {
+    try {
+      const docs = await this.firestoreService.getAllDocuments(this.nomeRazaoCollectionName);
+      this.nomeRazaoList = docs as (NomeRazao & { id?: string })[];
+      this.applyNomeRazaoFilter();
+    } catch (error) {
+      console.error('Erro ao carregar nomes/razões sociais:', error);
+    }
   }
 
   /**
@@ -151,8 +172,34 @@ export class CompanyYearTableComponent implements OnInit {
     });
     
     this.allCompanies = Array.from(companiesSet).sort();
+    this.filteredCompanies = [...this.allCompanies];
     // Inicialmente nenhuma selecionada
     this.selectedCompanies = new Set();
+  }
+
+  applyCompanyFilter(): void {
+    if (!this.companySearchTerm) {
+      this.filteredCompanies = [...this.allCompanies];
+      return;
+    }
+
+    const term = this.companySearchTerm.toLowerCase();
+    this.filteredCompanies = this.allCompanies.filter(company =>
+      company.toLowerCase().includes(term)
+    );
+  }
+
+  applyNomeRazaoFilter(): void {
+    if (!this.nomeRazaoSearchTerm) {
+      this.filteredNomeRazaoList = [...this.nomeRazaoList];
+      return;
+    }
+
+    const term = this.nomeRazaoSearchTerm.toLowerCase();
+    this.filteredNomeRazaoList = this.nomeRazaoList.filter(item =>
+      item.nomePessoaFisica.toLowerCase().includes(term) ||
+      item.nomeRazaoSocial.toLowerCase().includes(term)
+    );
   }
 
   /**
@@ -190,6 +237,19 @@ export class CompanyYearTableComponent implements OnInit {
    */
   isCompanySelected(company: string): boolean {
     return this.selectedCompanies.has(company);
+  }
+
+  openSelectedCompaniesModal(): void {
+    this.selectedCompaniesArray = Array.from(this.selectedCompanies).sort();
+    if (this.selectedCompaniesArray.length === 0) {
+      alert('Selecione pelo menos uma empresa para conferir.');
+      return;
+    }
+    this.showSelectedCompaniesModal = true;
+  }
+
+  closeSelectedCompaniesModal(): void {
+    this.showSelectedCompaniesModal = false;
   }
 
   /**
@@ -312,6 +372,15 @@ export class CompanyYearTableComponent implements OnInit {
         const companyData = grouped.get(company)!;
         const currentValue = companyData.get(year) || 0;
         companyData.set(year, currentValue + value);
+      }
+    });
+
+    // Garante que todas as empresas selecionadas apareçam na tabela,
+    // mesmo que não tenham documentos no período (totais zerados)
+    this.selectedCompanies.forEach(selectedCompany => {
+      const company = String(selectedCompany || 'Sem Nome').trim();
+      if (!grouped.has(company)) {
+        grouped.set(company, new Map<number, number>());
       }
     });
 
