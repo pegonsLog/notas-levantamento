@@ -251,11 +251,13 @@
   }
 }
 
-.charts-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+.chart-full {
+  width: 100%;
+  margin-bottom: 1.5rem;
+  
+  .chart {
+    height: 400px;
+  }
 }
 
 .chart-card {
@@ -276,6 +278,93 @@
   .chart-large {
     height: 400px;
   }
+}
+
+/* Seção de Gasto Específico */
+.gasto-filter-section {
+  margin-bottom: 2rem;
+}
+
+.gasto-filter-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #805ad5;
+}
+
+.gasto-filter-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    color: #805ad5;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0;
+  }
+}
+
+.gasto-filter-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  label {
+    font-weight: 500;
+    color: #4a5568;
+    white-space: nowrap;
+  }
+
+  .gasto-select {
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+  }
+}
+
+.chart-gasto-full {
+  width: 100%;
+  margin-bottom: 2rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.chart-scroll-wrapper {
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #a0aec0;
+    border-radius: 4px;
+    
+    &:hover {
+      background: #718096;
+    }
+  }
+}
+
+.chart-wide {
+  min-width: 1200px;
+  height: 400px;
 }
 
 .funcionario-filter {
@@ -403,6 +492,30 @@
   animation: slideDown 0.3s ease;
 }
 
+.table-scroll-wrapper {
+  overflow-x: auto;
+  margin: 0 -0.5rem;
+  padding: 0 0.5rem;
+  
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #a0aec0;
+    border-radius: 4px;
+    
+    &:hover {
+      background: #718096;
+    }
+  }
+}
+
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -500,6 +613,15 @@
     align-items: stretch;
 
     .filter-select {
+      max-width: 100%;
+    }
+  }
+
+  .gasto-filter-content {
+    flex-direction: column;
+    align-items: stretch;
+
+    .gasto-select {
       max-width: 100%;
     }
   }

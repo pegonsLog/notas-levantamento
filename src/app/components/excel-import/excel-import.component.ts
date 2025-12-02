@@ -185,6 +185,46 @@ export class ExcelImportComponent {
         this.ignoredColumns
       );
 
+      // Verifica duplicados antes de importar
+      this.statusMessage = 'Verificando registros duplicados...';
+      this.cdr.detectChanges();
+      
+      const existingDocs = await this.firestoreService.getAllDocuments(this.collectionName);
+      const existingKeys = new Set<string>();
+      
+      existingDocs.forEach(doc => {
+        const clifor = String(doc['NOME CLIFOR'] || '').trim().toUpperCase();
+        const nf = String(doc['NF'] || '').trim().toUpperCase();
+        const emissao = this.formatDateKey(doc['EMISSÃO'] || doc['EMISSAO']);
+        const valor = this.extractNumber(doc['VALOR'] || doc['TOTAL'] || doc['TOTAL BRUTO']);
+        const key = `${clifor}-${nf}-${emissao}-${valor}`;
+        existingKeys.add(key);
+      });
+
+      // Verifica quais registros do arquivo já existem
+      const duplicados: string[] = [];
+      processedData.forEach(row => {
+        const clifor = String(row['NOME CLIFOR'] || '').trim().toUpperCase();
+        const nf = String(row['NF'] || '').trim().toUpperCase();
+        const emissao = this.formatDateKey(row['EMISSÃO'] || row['EMISSAO']);
+        const valor = this.extractNumber(row['VALOR'] || row['TOTAL'] || row['TOTAL BRUTO']);
+        const key = `${clifor}-${nf}-${emissao}-${valor}`;
+        
+        if (existingKeys.has(key)) {
+          duplicados.push(`${row['NOME CLIFOR']} - NF ${row['NF']}`);
+        }
+      });
+
+      if (duplicados.length > 0) {
+        this.importStatus = 'error';
+        const maxShow = 10;
+        const duplicadosMsg = duplicados.slice(0, maxShow).join(', ');
+        const moreMsg = duplicados.length > maxShow ? ` e mais ${duplicados.length - maxShow} registro(s)` : '';
+        this.statusMessage = `Importação bloqueada! ${duplicados.length} registro(s) já existe(m) no banco de dados: ${duplicadosMsg}${moreMsg}`;
+        this.isLoading = false;
+        return;
+      }
+
       // Adiciona timestamp de importação
       const dataWithTimestamp = processedData.map(row => ({
         ...row,
@@ -320,6 +360,51 @@ export class ExcelImportComponent {
     // Verifica se é número
     if (typeof value === 'number') {
       return this.formatService.formatNumber(value, 0);
+    }
+    
+    return String(value);
+  }
+
+  private extractNumber(value: any): number {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const cleaned = value.replace(/[^\d,.-]/g, '').replace(',', '.');
+      return parseFloat(cleaned) || 0;
+    }
+    return 0;
+  }
+
+  private formatDateKey(value: any): string {
+    if (!value) return '';
+    
+    // Se for Timestamp do Firestore
+    if (value && typeof value.toDate === 'function') {
+      const date = value.toDate();
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+    
+    // Se for Date
+    if (value instanceof Date) {
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    }
+    
+    // Se for número serial do Excel
+    if (typeof value === 'number' && value > 1 && value < 100000) {
+      const excelEpoch = new Date(1899, 11, 30);
+      const days = value >= 60 ? value - 1 : value;
+      const milliseconds = days * 24 * 60 * 60 * 1000;
+      const date = new Date(excelEpoch.getTime() + milliseconds);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+    
+    // Se for string
+    if (typeof value === 'string') {
+      // Tenta parsear como data
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      }
+      return value;
     }
     
     return String(value);

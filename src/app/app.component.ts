@@ -11,7 +11,7 @@ import { filter } from 'rxjs/operators';
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
-  title = 'Levantamento de Custos com Pessoal';
+  title = 'Controle de Pessoal';
   activeMenu: 'notas' | 'folha' = 'notas';
 
   constructor(private router: Router) {

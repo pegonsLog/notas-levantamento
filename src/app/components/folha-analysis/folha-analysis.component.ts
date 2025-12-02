@@ -31,8 +31,8 @@ export class FolhaAnalysisComponent implements OnInit {
   showResults: boolean = false;
   
   // Filtros
-  selectedYear: number = new Date().getFullYear();
-  selectedMonth: string = 'all';
+  selectedYearStart: number = new Date().getFullYear();
+  selectedYearEnd: number = new Date().getFullYear();
   availableYears: number[] = [];
   
   // Dados por funcionário
@@ -54,14 +54,37 @@ export class FolhaAnalysisComponent implements OnInit {
   
   // Gráficos gerais
   chartCustoMensal: EChartsOption = {};
-  chartDistribuicao: EChartsOption = {};
-  chartSalarioFuncionario: EChartsOption = {};
+  
+  // Gráfico de gasto específico
+  selectedGasto: string = '';
+  chartGastoMensal: EChartsOption = {};
+  showGastoChart: boolean = false;
+  
+  // Colunas de gastos disponíveis para o filtro (exceto vale cultura, abonos e farmácia)
+  gastosColumns: { value: string, label: string }[] = [
+    { value: 'SALARIO MES', label: 'Salário Mensal' },
+    { value: 'SALARIO LIQUIDO', label: 'Salário Líquido' },
+    { value: 'ADIANTAMENTO', label: 'Adiantamento' },
+    { value: 'COMISSAO+DSR', label: 'Comissão + DSR' },
+    { value: 'HORAS EXTRAS', label: 'Horas Extras' },
+    { value: 'INSALUBRIDADE', label: 'Insalubridade' },
+    { value: 'FERIAS', label: 'Férias' },
+    { value: 'INSS', label: 'INSS' },
+    { value: 'INSS13º', label: 'INSS 13º' },
+    { value: 'INSS FERIAS', label: 'INSS Férias' },
+    { value: 'SISTEMA S', label: 'Sistema S' },
+    { value: 'RAT', label: 'RAT' },
+    { value: 'FGTS', label: 'FGTS' },
+    { value: 'IRRF', label: 'IRRF' },
+    { value: 'IRRF FERIAS', label: 'IRRF Férias' },
+    { value: 'ODONTO', label: 'Odonto' }
+  ];
 
   // Colunas de descontos
   descontoColumns = ['INSS', 'INSS13º', 'INSS FERIAS', 'SISTEMA S', 'RAT', 'FGTS', 'IRRF', 'IRRF FERIAS', 'ODONTO', 'VALE CULTURA', 'FARMACIA'];
   
   // Colunas de adicionais
-  adicionalColumns = ['COMISSAO+DSR', 'HORAS EXTRAS', 'BONUS', 'INSALUBRIDADE', 'FERIAS', 'ADIANTAMENTO'];
+  adicionalColumns = ['COMISSAO+DSR', 'HORAS EXTRAS', 'INSALUBRIDADE', 'FERIAS', 'ADIANTAMENTO'];
 
   constructor(
     private firestoreService: FirestoreService,
@@ -85,8 +108,13 @@ export class FolhaAnalysisComponent implements OnInit {
       });
       this.availableYears = Array.from(years).sort((a, b) => b - a);
       
-      if (this.availableYears.length > 0 && !this.availableYears.includes(this.selectedYear)) {
-        this.selectedYear = this.availableYears[0];
+      if (this.availableYears.length > 0) {
+        if (!this.availableYears.includes(this.selectedYearStart)) {
+          this.selectedYearStart = this.availableYears[this.availableYears.length - 1]; // Ano mais antigo
+        }
+        if (!this.availableYears.includes(this.selectedYearEnd)) {
+          this.selectedYearEnd = this.availableYears[0]; // Ano mais recente
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar documentos:', error);
@@ -112,20 +140,17 @@ export class FolhaAnalysisComponent implements OnInit {
     this.applyFuncionarioFilter();
     this.calculateTotals();
     this.createGeneralCharts(filteredDocs);
-    this.createSalarioFuncionarioChart();
     
     this.showResults = true;
   }
 
   filterDocuments(): any[] {
+    const yearStart = Number(this.selectedYearStart);
+    const yearEnd = Number(this.selectedYearEnd);
+    
     return this.documents.filter(doc => {
       const ano = this.extractNumber(doc['ANO']);
-      if (ano !== this.selectedYear) return false;
-      
-      if (this.selectedMonth !== 'all') {
-        const mes = this.extractNumber(doc['MES']);
-        if (mes !== parseInt(this.selectedMonth)) return false;
-      }
+      if (ano < yearStart || ano > yearEnd) return false;
       
       return true;
     });
@@ -156,14 +181,24 @@ export class FolhaAnalysisComponent implements OnInit {
         totalAdicionais += records.reduce((sum, r) => sum + this.extractNumber(r[col]), 0);
       });
 
+      // Ordena registros por ano e mês decrescente
+      const sortedRecords = records.sort((a, b) => {
+        const anoA = this.extractNumber(a['ANO']);
+        const anoB = this.extractNumber(b['ANO']);
+        if (anoA !== anoB) return anoB - anoA;
+        const mesA = this.extractNumber(a['MES']);
+        const mesB = this.extractNumber(b['MES']);
+        return mesB - mesA;
+      });
+
       return {
         name,
         totalSalario,
         totalLiquido,
         totalDescontos,
         totalAdicionais,
-        recordCount: records.length,
-        records,
+        recordCount: sortedRecords.length,
+        records: sortedRecords,
         isExpanded: false
       };
     });
@@ -188,20 +223,41 @@ export class FolhaAnalysisComponent implements OnInit {
   }
 
   createGeneralCharts(docs: any[]): void {
-    // Gráfico de custo mensal
-    const monthlyData = new Map<number, number>();
+    // Gráfico de custo mensal - agrupa por ano e mês dinamicamente
+    const yearStart = Number(this.selectedYearStart);
+    const yearEnd = Number(this.selectedYearEnd);
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    
+    // Agrupa valores por ano-mês
+    const monthlyData = new Map<string, number>();
     docs.forEach(doc => {
+      const ano = this.extractNumber(doc['ANO']);
       const mes = this.extractNumber(doc['MES']);
       const valor = this.extractNumber(doc['SALARIO MES'] || doc['SALARIO']);
-      monthlyData.set(mes, (monthlyData.get(mes) || 0) + valor);
+      const key = `${ano}-${String(mes).padStart(2, '0')}`; // Para ordenação correta
+      monthlyData.set(key, (monthlyData.get(key) || 0) + valor);
     });
 
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const monthValues = Array.from({ length: 12 }, (_, i) => monthlyData.get(i + 1) || 0);
+    // Ordena as chaves cronologicamente
+    const sortedKeys = Array.from(monthlyData.keys()).sort();
+    
+    // Cria labels e valores
+    const labels: string[] = [];
+    const monthValues: number[] = [];
+    
+    sortedKeys.forEach(key => {
+      const [year, month] = key.split('-');
+      const monthIndex = parseInt(month) - 1;
+      const label = yearStart === yearEnd 
+        ? monthNames[monthIndex] 
+        : `${monthNames[monthIndex]}/${year.slice(-2)}`;
+      labels.push(label);
+      monthValues.push(monthlyData.get(key) || 0);
+    });
 
     this.chartCustoMensal = {
       title: {
-        text: `Custo Mensal com Folha - ${this.selectedYear}`,
+        text: `Custo Mensal com Folha - ${this.selectedYearStart}${yearStart !== yearEnd ? ' a ' + this.selectedYearEnd : ''}`,
         left: 'center',
         textStyle: { fontFamily: 'Montserrat', fontSize: 16, fontWeight: 600, color: '#2d3748' }
       },
@@ -212,11 +268,15 @@ export class FolhaAnalysisComponent implements OnInit {
           return `${data.name}<br/>Total: ${this.formatCurrency(data.value)}`;
         }
       },
-      grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+      grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
       xAxis: {
         type: 'category',
-        data: months,
-        axisLabel: { fontFamily: 'Montserrat' }
+        data: labels,
+        axisLabel: { 
+          fontFamily: 'Montserrat',
+          rotate: yearStart !== yearEnd ? 45 : 0,
+          fontSize: yearStart !== yearEnd ? 10 : 12
+        }
       },
       yAxis: {
         type: 'value',
@@ -239,111 +299,6 @@ export class FolhaAnalysisComponent implements OnInit {
             ]
           },
           borderRadius: [8, 8, 0, 0]
-        },
-        barMaxWidth: 50
-      }]
-    };
-
-    // Gráfico de distribuição por centro de custo
-    const ccData = new Map<string, number>();
-    docs.forEach(doc => {
-      const cc = String(doc['DESCRICAO CC'] || doc['CENTRO CUSTO'] || 'Outros').trim();
-      const valor = this.extractNumber(doc['SALARIO MES'] || doc['SALARIO']);
-      ccData.set(cc, (ccData.get(cc) || 0) + valor);
-    });
-
-    const pieData = Array.from(ccData.entries())
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
-
-    this.chartDistribuicao = {
-      title: {
-        text: 'Distribuição por Centro de Custo',
-        left: 'center',
-        textStyle: { fontFamily: 'Montserrat', fontSize: 16, fontWeight: 600, color: '#2d3748' }
-      },
-      tooltip: {
-        trigger: 'item',
-        formatter: (params: any) => `${params.name}<br/>${this.formatCurrency(params.value)} (${params.percent}%)`
-      },
-      legend: {
-        orient: 'vertical',
-        left: 'left',
-        top: 'middle',
-        textStyle: { fontFamily: 'Montserrat' }
-      },
-      series: [{
-        name: 'Centro de Custo',
-        type: 'pie',
-        radius: ['40%', '70%'],
-        center: ['60%', '50%'],
-        avoidLabelOverlap: true,
-        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-        label: { show: false },
-        emphasis: {
-          label: { show: true, fontSize: 14, fontWeight: 'bold' }
-        },
-        data: pieData
-      }]
-    };
-  }
-
-  createSalarioFuncionarioChart(): void {
-    // Ordena por salário decrescente e pega os top 15
-    const sortedFuncionarios = [...this.funcionarios]
-      .sort((a, b) => b.totalSalario - a.totalSalario)
-      .slice(0, 15);
-
-    const names = sortedFuncionarios.map(f => f.name);
-    const salarios = sortedFuncionarios.map(f => f.totalSalario);
-
-    this.chartSalarioFuncionario = {
-      title: {
-        text: 'Salário por Funcionário (Top 15)',
-        left: 'center',
-        textStyle: { fontFamily: 'Montserrat', fontSize: 16, fontWeight: 600, color: '#2d3748' }
-      },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        formatter: (params: any) => {
-          const data = params[0];
-          return `${data.name}<br/>Salário: ${this.formatCurrency(data.value)}`;
-        }
-      },
-      grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
-      xAxis: {
-        type: 'category',
-        data: names,
-        axisLabel: {
-          fontFamily: 'Montserrat',
-          rotate: 45,
-          interval: 0,
-          fontSize: 10
-        }
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: {
-          fontFamily: 'Montserrat',
-          formatter: (value: number) => this.formatCurrency(value)
-        }
-      },
-      series: [{
-        name: 'Salário',
-        type: 'bar',
-        data: salarios,
-        itemStyle: {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: '#3182ce' },
-              { offset: 1, color: '#2c5282' }
-            ]
-          },
-          borderRadius: [6, 6, 0, 0]
         },
         barMaxWidth: 40
       }]
@@ -377,11 +332,121 @@ export class FolhaAnalysisComponent implements OnInit {
     return months[mes - 1] || '';
   }
 
+  getMonthShortName(mes: number): string {
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return months[mes - 1] || '';
+  }
+
   clearFilters(): void {
-    this.selectedYear = this.availableYears[0] || new Date().getFullYear();
-    this.selectedMonth = 'all';
+    this.selectedYearStart = this.availableYears[this.availableYears.length - 1] || new Date().getFullYear();
+    this.selectedYearEnd = this.availableYears[0] || new Date().getFullYear();
     this.selectedFuncionario = 'all';
+    this.selectedGasto = '';
     this.showResults = false;
+    this.showGastoChart = false;
     this.funcionarios = [];
+  }
+
+  onGastoChange(): void {
+    if (!this.selectedGasto) {
+      this.showGastoChart = false;
+      return;
+    }
+    this.createGastoMensalChart();
+    this.showGastoChart = true;
+  }
+
+  createGastoMensalChart(): void {
+    const filteredDocs = this.filterDocuments();
+    const yearStart = Number(this.selectedYearStart);
+    const yearEnd = Number(this.selectedYearEnd);
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    
+    // Agrupa valores por ano-mês dinamicamente
+    const monthlyData = new Map<string, number>();
+    filteredDocs.forEach(doc => {
+      const ano = this.extractNumber(doc['ANO']);
+      const mes = this.extractNumber(doc['MES']);
+      const valor = this.extractNumber(doc[this.selectedGasto]);
+      const key = `${ano}-${String(mes).padStart(2, '0')}`;
+      monthlyData.set(key, (monthlyData.get(key) || 0) + valor);
+    });
+
+    // Ordena as chaves cronologicamente
+    const sortedKeys = Array.from(monthlyData.keys()).sort();
+    
+    // Cria labels e valores
+    const labels: string[] = [];
+    const monthValues: number[] = [];
+    
+    sortedKeys.forEach(key => {
+      const [year, month] = key.split('-');
+      const monthIndex = parseInt(month) - 1;
+      const label = yearStart === yearEnd 
+        ? monthNames[monthIndex] 
+        : `${monthNames[monthIndex]}/${year.slice(-2)}`;
+      labels.push(label);
+      monthValues.push(monthlyData.get(key) || 0);
+    });
+    
+    // Encontra o label do gasto selecionado
+    const gastoLabel = this.gastosColumns.find(g => g.value === this.selectedGasto)?.label || this.selectedGasto;
+
+    this.chartGastoMensal = {
+      title: {
+        text: `${gastoLabel} por Mês - ${this.selectedYearStart}${yearStart !== yearEnd ? ' a ' + this.selectedYearEnd : ''}`,
+        left: 'center',
+        textStyle: { fontFamily: 'Montserrat', fontSize: 16, fontWeight: 600, color: '#2d3748' }
+      },
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params: any) => {
+          const data = params[0];
+          return `${data.name}<br/>${gastoLabel}: ${this.formatCurrency(data.value)}`;
+        }
+      },
+      grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: labels,
+        axisLabel: { 
+          fontFamily: 'Montserrat',
+          rotate: yearStart !== yearEnd ? 45 : 0,
+          fontSize: yearStart !== yearEnd ? 10 : 12
+        }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          fontFamily: 'Montserrat',
+          formatter: (value: number) => this.formatCurrency(value)
+        }
+      },
+      series: [{
+        name: gastoLabel,
+        type: 'bar',
+        data: monthValues,
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: '#805ad5' },
+              { offset: 1, color: '#6b46c1' }
+            ]
+          },
+          borderRadius: [8, 8, 0, 0]
+        },
+        barMaxWidth: 50,
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (params: any) => params.value > 0 ? this.formatCurrency(params.value) : '',
+          fontFamily: 'Montserrat',
+          fontSize: 10,
+          color: '#4a5568'
+        }
+      }]
+    };
   }
 }
