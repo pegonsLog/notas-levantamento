@@ -50,6 +50,20 @@
       <span>{{ statusMessage }}</span>
     </div>
 
+    <!-- Barra de Progresso -->
+    <div *ngIf="importStatus === 'processing' && totalToImport > 0" class="progress-container">
+      <div class="progress-header">
+        <span class="progress-label">Progresso da Importação</span>
+        <span class="progress-percentage">{{ importProgress }}%</span>
+      </div>
+      <div class="progress-bar-wrapper">
+        <div class="progress-bar" [style.width.%]="importProgress"></div>
+      </div>
+      <div class="progress-details">
+        <span>{{ importedCount }} de {{ totalToImport }} registros importados</span>
+      </div>
+    </div>
+
     <!-- Prévia dos dados -->
     <div *ngIf="previewData.length > 0" class="preview-section">
       <h3 class="preview-title">Prévia dos Dados (primeiras 5 linhas)</h3>

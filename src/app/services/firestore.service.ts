@@ -70,16 +70,28 @@ export class FirestoreService {
    * @param collectionName Nome da coleção
    * @param dataArray Array de dados a serem adicionados
    * @param batchSize Tamanho do lote (padrão: 500, máximo do Firestore)
+   * @param onProgress Callback opcional para reportar progresso (current, total)
    * @returns Promise com número de documentos adicionados
    */
-  async addDocumentsInBatch(collectionName: string, dataArray: any[], batchSize: number = 500): Promise<number> {
+  async addDocumentsInBatch(
+    collectionName: string, 
+    dataArray: any[], 
+    batchSize: number = 500,
+    onProgress?: (current: number, total: number) => void
+  ): Promise<number> {
     try {
       let totalAdded = 0;
+      const total = dataArray.length;
       
       for (let i = 0; i < dataArray.length; i += batchSize) {
         const batch = dataArray.slice(i, i + batchSize);
         await this.addMultipleDocuments(collectionName, batch);
         totalAdded += batch.length;
+        
+        // Reporta progresso se callback foi fornecido
+        if (onProgress) {
+          onProgress(totalAdded, total);
+        }
       }
       
       return totalAdded;

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ExcelImportService, ExcelRow } from '../../services/excel-import.service';
 import { FirestoreService } from '../../services/firestore.service';
@@ -20,6 +20,11 @@ export class ExcelImportComponent {
   previewData: ExcelRow[] = [];
   columnNames: string[] = [];
   totalRows: number = 0;
+  
+  // Progresso da importação
+  importProgress: number = 0;
+  importedCount: number = 0;
+  totalToImport: number = 0;
   
   // Configuração das colunas - Define os tipos de dados para conversão
   collectionName: string = 'notas-levantamento';
@@ -84,7 +89,8 @@ export class ExcelImportComponent {
   constructor(
     private excelImportService: ExcelImportService,
     private firestoreService: FirestoreService,
-    public formatService: FormatService
+    public formatService: FormatService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   /**
@@ -186,12 +192,27 @@ export class ExcelImportComponent {
         arquivoOrigem: this.fileName
       }));
 
-      this.statusMessage = 'Salvando no Firestore...';
+      // Inicializa progresso ANTES de começar
+      this.totalToImport = dataWithTimestamp.length;
+      this.importedCount = 0;
+      this.importProgress = 0;
+      this.statusMessage = `Importando... 0 de ${this.totalToImport} registros (0%)`;
+      this.cdr.detectChanges(); // Força atualização inicial da UI
 
-      // Salva no Firestore
+      // Calcula batch size para atualizar de 1 em 1% (mínimo 1, máximo 500)
+      const batchSize = Math.max(1, Math.min(500, Math.floor(this.totalToImport / 100)));
+
+      // Salva no Firestore com callback de progresso
       const totalAdded = await this.firestoreService.addDocumentsInBatch(
         this.collectionName,
-        dataWithTimestamp
+        dataWithTimestamp,
+        batchSize,
+        (current, total) => {
+          this.importedCount = current;
+          this.importProgress = Math.round((current / total) * 100);
+          this.statusMessage = `Importando... ${current} de ${total} registros (${this.importProgress}%)`;
+          this.cdr.detectChanges(); // Força atualização da UI
+        }
       );
 
       this.importStatus = 'success';
@@ -229,6 +250,9 @@ export class ExcelImportComponent {
     this.resetFileSelection();
     this.importStatus = 'idle';
     this.statusMessage = '';
+    this.importProgress = 0;
+    this.importedCount = 0;
+    this.totalToImport = 0;
   }
 
   /**
