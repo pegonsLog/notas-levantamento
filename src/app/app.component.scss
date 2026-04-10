@@ -172,7 +172,7 @@
 }
 
 .app-nav {
-  background: white;
+  background: #f7f7f7;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
@@ -187,9 +187,27 @@
   .container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0.75rem 2rem;
+    padding: 0.5rem 0;
     display: flex;
+    align-items: center;
     justify-content: center;
+  }
+
+  .nav-logo {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .nav-logo-left {
+    margin-right: auto;
+    padding-left: 0.5rem;
+  }
+
+  .nav-logo-right {
+    margin-left: auto;
+    padding-right: 0.5rem;
   }
 
   .nav-group {
@@ -323,6 +341,10 @@
     .container {
       padding: 0.5rem 1rem;
       overflow-x: auto;
+    }
+
+    .nav-logo {
+      height: 22px;
     }
 
     .nav-group {
